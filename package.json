@@ -1,0 +1,7 @@
+{
+  "name": "idle-batched-mint",
+  "version": "0.1.0",
+  "main": "index.js",
+  "author": "Idle Labs Inc. <info@idle.finance>",
+  "license": "Apache License, Version 2.0"
+}

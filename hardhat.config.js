@@ -1,6 +1,7 @@
 // require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require('chai').should();
+require('@openzeppelin/hardhat-upgrades');
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -28,6 +29,12 @@ module.exports = {
         version: "0.7.6",
       }
     ]
+  },
+  networks: {
+    hardhat: {},
+    local: {
+      url: "http://127.0.0.1:8545/"
+    }
   }
 };
 

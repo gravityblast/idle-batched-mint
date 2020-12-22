@@ -1,4 +1,5 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
+const { ethers, upgrades } = require("hardhat");
 
 const DAIMock = artifacts.require('DAIMock');
 const IdleTokenMock = artifacts.require('IdleTokenMock');
@@ -8,11 +9,15 @@ const BNify = n => new BN(String(n));
 
 contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, user4]) {
   beforeEach(async () => {
+
     this.one = new BN('1000000000000000000');
     this.DAIMock = await DAIMock.new({ from: owner });
     this.token = await IdleTokenMock.new(this.DAIMock.address, { from: owner });
-    this.batchedMint = await IdleBatchedMint.new({ from: owner });
-    await this.batchedMint.initialize(this.token.address, { from: owner });
+
+    const signers = await ethers.getSigners();
+    const contract = (await ethers.getContractFactory("IdleBatchedMint")).connect(signers[1]);
+    const instance = await upgrades.deployProxy(contract, [this.token.address]);
+    this.batchedMint = await IdleBatchedMint.at(instance.address);
   });
 
   it("creates batches", async () => {

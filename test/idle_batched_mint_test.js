@@ -119,7 +119,7 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
 
     const withdraw = async (user, batch, expectedAmount) => {
       const initialBalance = await this.token.balanceOf(user);
-      await this.batchedMint.withdraw(0, { from: user1 });
+      await this.batchedMint.withdraw(batch, { from: user });
       const balanceAfter = await this.token.balanceOf(user);
       balanceAfter.toString().should.be.equal(initialBalance.add(BNify(expectedAmount)).toString());
     }
@@ -142,7 +142,7 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await checkBalance(this.batchedMint.address, this.token, "0");
     await checkBalance(this.batchedMint.address, this.DAIMock, "21");
 
-    // execute batch
+    // execute batch 0
     await this.batchedMint.executeBatch(true);
 
     // check contract tokens balance
@@ -150,7 +150,7 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await checkBalance(this.batchedMint.address, this.DAIMock, "0");
     await checkBalance(user1, this.token, "0");
 
-    // user1 withdraws
+    // user1 withdraws batch 0
     await withdraw(user1, 0, "10");
 
     // check user balance and contract balance
@@ -161,5 +161,24 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await permitAndDeposit(user2, 30);
     await checkUserDeposit(user2, 0, "5");
     await checkUserDeposit(user2, 1, "30");
+
+    // execute batch 1
+    await this.batchedMint.executeBatch(true);
+
+    // user2 has 0 idle tokens
+    await checkBalance(user2, this.token, "0");
+    // contract has 41 idle tokens
+    await checkBalance(this.batchedMint.address, this.token, "41");
+
+    // user2 withdraws batch 1
+    await withdraw(user2, 1, "30");
+    // user2 deposit for batch 0 is still 5
+    await checkUserDeposit(user2, 0, "5");
+    // user2 deposit for batch 1 is 0
+    await checkUserDeposit(user2, 1, "0");
+    // user2 has 30 idle tokens
+    await checkBalance(user2, this.token, "30");
+    // contract has 11 idle tokens
+    await checkBalance(this.batchedMint.address, this.token, "11");
   });
 });

@@ -11,6 +11,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/IIdleTokenV3_1.sol";
 
+import "hardhat/console.sol";
+
+interface IERC20Permit is IERC20 {
+  function permit(address holder, address spender, uint256 nonce, uint256 expiry,
+                  bool allowed, uint8 v, bytes32 r, bytes32 s) external;
+}
+
 contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeable {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
@@ -35,10 +42,15 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
   }
 
   // User should approve this contract first to spend IdleTokens idleToken
-  function deposit(uint256 amount) external whenNotPaused {
+  function deposit(uint256 amount) public whenNotPaused {
     IERC20(underlying).safeTransferFrom(msg.sender, address(this), amount);
     batchDeposits[msg.sender][currBatch] = batchDeposits[msg.sender][currBatch].add(amount);
     batchTotals[currBatch] = batchTotals[currBatch].add(amount);
+  }
+
+  function permitAndDeposit(uint256 amount, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external whenNotPaused {
+    IERC20Permit(underlying).permit(msg.sender, address(this), nonce, expiry, true, v, r, s);
+    deposit(amount);
   }
 
   function withdraw(uint256 batchId) external whenNotPaused {

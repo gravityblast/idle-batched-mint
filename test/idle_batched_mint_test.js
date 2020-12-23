@@ -7,9 +7,69 @@ const IdleBatchedMint = artifacts.require('IdleBatchedMint');
 
 const BNify = n => new BN(String(n));
 
+const signPermit = async (contractAddress, holder, spender, nonce, expiry) => {
+  const result = await web3.eth.net.getId();
+  const chainId = parseInt(result);
+
+  const domain = [
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+    { name: "chainId", type: "uint256" },
+    { name: "verifyingContract", type: "address" }
+  ];
+
+  const permit = [
+    { name: "holder", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "nonce", type: "uint256" },
+    { name: "expiry", type: "uint256" },
+    { name: "allowed", type: "bool" },
+  ];
+
+  const domainData = {
+    name: "Dai Stablecoin",
+    version: "1",
+    chainId: chainId,
+    verifyingContract: contractAddress
+  };
+
+  const message = {
+    holder,
+    spender,
+    nonce,
+    expiry,
+    allowed: true,
+  };
+
+  const data = {
+    types: {
+      EIP712Domain: domain,
+      Permit: permit,
+    },
+    primaryType: "Permit",
+    domain: domainData,
+    message: message
+  };
+
+  return new Promise((resolve, reject) => {
+    web3.currentProvider.send({
+      jsonrpc: '2.0',
+      id: Date.now().toString().substring(9),
+      method: "eth_signTypedData",
+      params: [holder, data],
+      from: holder
+    }, (error, res) => {
+      if (error) {
+        return reject(error);
+      }
+
+      resolve(res.result);
+    });
+  });
+}
+
 contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, user4]) {
   beforeEach(async () => {
-
     this.one = new BN('1000000000000000000');
     this.DAIMock = await DAIMock.new({ from: owner });
     this.token = await IdleTokenMock.new(this.DAIMock.address, { from: owner });
@@ -22,9 +82,26 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
 
   it("creates batches", async () => {
     const deposit = async (user, amount) => {
+      // transfer amount from owner to user
       await this.DAIMock.transfer(user, amount, { from: owner });
+      // approve from user to contract
       await this.DAIMock.approve(this.batchedMint.address, amount, { from: user });
+      // call deposit
       await this.batchedMint.deposit(amount, { from: user });
+    }
+
+    const permitAndDeposit = async (user, amount) => {
+      const nonce = 0;
+      const expiry = Math.round(new Date().getTime() / 1000 + 3600);
+      const sig =  await signPermit(this.DAIMock.address, user, this.batchedMint.address, nonce, expiry);
+      const r = sig.slice(0, 66);
+      const s = "0x" + sig.slice(66, 130);
+      const v = "0x" + sig.slice(130, 132);
+
+      // transfer amount from owner to user
+      await this.DAIMock.transfer(user, amount, { from: owner });
+      // call permitAndDeposit
+      await this.batchedMint.permitAndDeposit(amount, nonce, expiry, v, r, s, { from: user });
     }
 
     const checkBalance = async (who, token, amount) => {
@@ -50,7 +127,7 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await checkBalance(this.batchedMint.address, this.token, "0");
     await checkBalance(this.batchedMint.address, this.DAIMock, "0");
 
-    // 3 users depsit
+    // 3 users deposit
     await deposit(user1, 10);
     await deposit(user2, 5);
     await deposit(user3, 6);
@@ -73,11 +150,16 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await checkBalance(this.batchedMint.address, this.DAIMock, "0");
     await checkBalance(user1, this.token, "0");
 
-    // withdraw
+    // user1 withdraws
     await withdraw(user1, 0, "10");
 
     // check user balance and contract balance
     await checkBalance(user1, this.token, "10");
     await checkBalance(this.batchedMint.address, this.token, "11");
+
+    // user2 permitAndDeposit
+    await permitAndDeposit(user2, 30);
+    await checkUserDeposit(user2, 0, "5");
+    await checkUserDeposit(user2, 1, "30");
   });
 });

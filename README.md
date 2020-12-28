@@ -39,3 +39,7 @@ export HOLDER=0x.... # address of an account with DAI funds
 npx hardhat run scripts/integration_test.js --network local
 ```
 
+
+### Deploy
+
+`npx hardhat run scripts/deploy.js --network YOUR_CONFIGURED_NETWORK`

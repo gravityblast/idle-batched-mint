@@ -34,6 +34,10 @@ module.exports = {
     hardhat: {},
     local: {
       url: "http://127.0.0.1:8545/"
+    },
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.IDLE_INFURA_KEY}`,
+      accounts: [`0x${process.env.MAINNET_PRIVATE_KEY}`],
     }
   }
 };

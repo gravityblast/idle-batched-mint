@@ -32,7 +32,7 @@ export IDLE_INFURA_KEY=YOUR_INFURA_KEY
 ./fork.sh mainnet # or ./fork.sh kovan
 ```
 
-Run the test:
+Run the integration test:
 
 ```
 export HOLDER=0x.... # address of an account with DAI funds
@@ -42,4 +42,7 @@ npx hardhat run scripts/integration_test.js --network local
 
 ### Deploy
 
-`npx hardhat run scripts/deploy.js --network YOUR_CONFIGURED_NETWORK`
+```
+export MAINNET_PRIVATE_KEY=YOUR_MAINNET_KEY # without 0x prefix
+npx hardhat run scripts/deploy.js --network YOUR_CONFIGURED_NETWORK
+```

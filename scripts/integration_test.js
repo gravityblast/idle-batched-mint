@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const { signPermit } = require("../lib");
 const { ethers, upgrades } = require("hardhat");
 const IERC20 = artifacts.require('IERC20Permit');
+const IdleTokenMock = artifacts.require('IdleTokenMock');
 const IdleBatchedMint = artifacts.require('IdleBatchedMint');
 
 const CHAIN_ID = 1;
@@ -17,12 +18,9 @@ const idleDAIRisk  = "0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16";
 const idleUSDCRisk = "0x3391bc034f2935ef0e1e41619445f998b2680d35";
 const idleUSDTRisk = "0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5";
 
-const daiAddress   = "0x6b175474e89094c44da98b954eedeac495271d0f";
-
 // config
 const holder = process.env.HOLDER;
 const idleTokenAddress = idleDAIBest;
-const underlyingAddress   = daiAddress;
 
 const main = async () => {
   if (holder === "") {
@@ -30,8 +28,13 @@ const main = async () => {
     process.exit(1);
   }
 
+  const underlyingAddress = await (await IdleTokenMock.at(idleTokenAddress)).token();
   const UnderlyingToken = await IERC20.at(underlyingAddress);
   const IdleToken = await IERC20.at(idleTokenAddress);
+
+  console.log("using idle token", (await IdleToken.name()), "-", idleTokenAddress);
+  console.log("using underlying token", (await UnderlyingToken.name()), "-", underlyingAddress);
+
 
   // deploy
   const factory = await ethers.getContractFactory("IdleBatchedMint");

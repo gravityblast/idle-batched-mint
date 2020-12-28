@@ -14,7 +14,7 @@ contract IdleTokenMock is ERC20 {
       underlying = _underlying;
   }
 
-  function token() public returns(address) {
+  function token() public view returns(address) {
     return underlying;
   }
 

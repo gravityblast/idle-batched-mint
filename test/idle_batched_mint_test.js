@@ -1,72 +1,12 @@
 const { expectEvent, singletons, constants, BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { ethers, upgrades } = require("hardhat");
+const { signPermit } = require("../lib");
 
 const DAIMock = artifacts.require('DAIMock');
 const IdleTokenMock = artifacts.require('IdleTokenMock');
 const IdleBatchedMint = artifacts.require('IdleBatchedMint');
 
 const BNify = n => new BN(String(n));
-
-const signPermit = async (contractAddress, holder, spender, nonce, expiry) => {
-  const result = await web3.eth.net.getId();
-  const chainId = parseInt(result);
-
-  const domain = [
-    { name: "name", type: "string" },
-    { name: "version", type: "string" },
-    { name: "chainId", type: "uint256" },
-    { name: "verifyingContract", type: "address" }
-  ];
-
-  const permit = [
-    { name: "holder", type: "address" },
-    { name: "spender", type: "address" },
-    { name: "nonce", type: "uint256" },
-    { name: "expiry", type: "uint256" },
-    { name: "allowed", type: "bool" },
-  ];
-
-  const domainData = {
-    name: "Dai Stablecoin",
-    version: "1",
-    chainId: chainId,
-    verifyingContract: contractAddress
-  };
-
-  const message = {
-    holder,
-    spender,
-    nonce,
-    expiry,
-    allowed: true,
-  };
-
-  const data = {
-    types: {
-      EIP712Domain: domain,
-      Permit: permit,
-    },
-    primaryType: "Permit",
-    domain: domainData,
-    message: message
-  };
-
-  return new Promise((resolve, reject) => {
-    web3.currentProvider.send({
-      jsonrpc: '2.0',
-      id: Date.now().toString().substring(9),
-      method: "eth_signTypedData",
-      params: [holder, data],
-      from: holder
-    }, (error, res) => {
-      if (error) {
-        return reject(error);
-      }
-
-      resolve(res.result);
-    });
-  });
-}
 
 contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, user4]) {
   beforeEach(async () => {

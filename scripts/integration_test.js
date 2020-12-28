@@ -25,6 +25,11 @@ const idleTokenAddress = idleDAIBest;
 const underlyingAddress   = daiAddress;
 
 const main = async () => {
+  if (holder === "") {
+    console.log("the HOLDER env var must be exported and be a valid address with enough underlying tokens.")
+    process.exit(1);
+  }
+
   const UnderlyingToken = await IERC20.at(underlyingAddress);
   const IdleToken = await IERC20.at(idleTokenAddress);
 

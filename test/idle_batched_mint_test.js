@@ -183,5 +183,14 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
 
     await this.batchedMint.withdrawGovToken(govTokens[2].address, user4, { from: govOwner });
     (await govTokens[2].balanceOf(user4)).toString().should.be.equal("30");
+
+    // cannot withdraw tokens that are not gov tokens
+    try {
+      await this.batchedMint.withdrawGovToken(this.DAIMock.address, user4, { from: govOwner });
+      throw("withdrawGovToken with bad token should have failed");
+    } catch(err) {
+      err.toString().should.match(/govToken not found/);
+    }
+
   });
 });

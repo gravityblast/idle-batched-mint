@@ -8,7 +8,7 @@ const IdleBatchedMint = artifacts.require('IdleBatchedMint');
 
 const BNify = n => new BN(String(n));
 
-contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, user4]) {
+contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2, user3, user4]) {
   beforeEach(async () => {
     this.one = new BN('1000000000000000000');
     this.DAIMock = await DAIMock.new({ from: owner });
@@ -120,5 +120,68 @@ contract('IdleBatchedMint', function ([_, owner, manager, user1, user2, user3, u
     await checkBalance(user2, this.token, "30");
     // contract has 11 idle tokens
     await checkBalance(this.batchedMint.address, this.token, "11");
+  });
+
+  it("withdraws govTokens", async () => {
+    const govTokens = [];
+    govTokens[0] = await DAIMock.new({ from: owner });
+    govTokens[1] = await DAIMock.new({ from: owner });
+    govTokens[2] = await DAIMock.new({ from: owner });
+
+    await this.token.setGovTokens([
+      govTokens[0].address,
+      govTokens[1].address,
+      govTokens[2].address,
+    ]);
+
+    // move gov tokens to contract
+    await govTokens[0].transfer(this.batchedMint.address, 10, { from: owner });
+    await govTokens[1].transfer(this.batchedMint.address, 20, { from: owner });
+    await govTokens[2].transfer(this.batchedMint.address, 30, { from: owner });
+
+    // user4 has 0 of each gov token
+    (await govTokens[0].balanceOf(user4)).toString().should.be.equal("0");
+    (await govTokens[1].balanceOf(user4)).toString().should.be.equal("0");
+    (await govTokens[2].balanceOf(user4)).toString().should.be.equal("0");
+
+    // user4 cannot withdraw gov tokens
+    try {
+      await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: user4 });
+      throw("withdrawGovToken from user4 should have failed");
+    } catch(err) {
+      err.toString().should.match(/caller is not the govOwner/);
+    }
+
+    // owner send gov tokens to user4
+    await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: owner });
+    (await govTokens[0].balanceOf(user4)).toString().should.be.equal("10");
+
+
+    // user4 cannot change govOwner
+    try {
+      await this.batchedMint.setGovOwner(user4, { from: user4 });
+      throw("setGovOwner from user4 should have failed");
+    } catch(err) {
+      err.toString().should.match(/Ownable: caller is not the owner/);
+    }
+
+    // owner can setGovOwner
+    await this.batchedMint.setGovOwner(govOwner, { from: owner });
+
+    // owner cannot withdraw gov tokens anymore
+    try {
+      await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: owner });
+      throw("withdrawGovToken from owner should have failed");
+    } catch(err) {
+      err.toString().should.match(/caller is not the govOwner/);
+    }
+
+    // govOwner sent other gov tokens to user4
+
+    await this.batchedMint.withdrawGovToken(govTokens[1].address, user4, { from: govOwner });
+    (await govTokens[1].balanceOf(user4)).toString().should.be.equal("20");
+
+    await this.batchedMint.withdrawGovToken(govTokens[2].address, user4, { from: govOwner });
+    (await govTokens[2].balanceOf(user4)).toString().should.be.equal("30");
   });
 });

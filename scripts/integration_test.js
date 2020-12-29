@@ -55,7 +55,8 @@ const main = async () => {
       const nonce = await UnderlyingToken.nonces(account);
       console.log("nonce:", nonce.toString())
       const expiry = Math.round(new Date().getTime() / 1000 + 3600);
-      const sig =  await signPermit(UnderlyingToken.address, account, idleBatchedMint.address, nonce, expiry, CHAIN_ID);
+      const erc20Name = await UnderlyingToken.name();
+      const sig =  await signPermit(UnderlyingToken.address, erc20Name, account, idleBatchedMint.address, nonce, expiry, CHAIN_ID);
       const r = sig.slice(0, 66);
       const s = "0x" + sig.slice(66, 130);
       const v = "0x" + sig.slice(130, 132);

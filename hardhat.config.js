@@ -19,6 +19,10 @@ task("accounts", "Prints the list of accounts", async () => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
+const mainnetAccounts = process.env.MAINNET_PRIVATE_KEY ? [`0x${process.env.MAINNET_PRIVATE_KEY}`] : [];
+const kovanAccounts = process.env.KOVAN_PRIVATE_KEY ? [`${process.env.KOVAN_PRIVATE_KEY}`] : [];
+
 module.exports = {
   solidity: {
     compilers: [
@@ -35,10 +39,14 @@ module.exports = {
     local: {
       url: "http://127.0.0.1:8545/"
     },
+    kovan: {
+      url: `https://kovan.infura.io/v3/${process.env.IDLE_INFURA_KEY}`,
+      accounts: kovanAccounts,
+    },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.IDLE_INFURA_KEY}`,
-      accounts: [`0x${process.env.MAINNET_PRIVATE_KEY}`],
-    }
-  }
+      accounts: mainnetAccounts,
+    },
+  },
 };
 

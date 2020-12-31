@@ -140,58 +140,19 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     await govTokens[1].transfer(this.batchedMint.address, 20, { from: owner });
     await govTokens[2].transfer(this.batchedMint.address, 30, { from: owner });
 
-    // user4 has 0 of each gov token
-    (await govTokens[0].balanceOf(user4)).toString().should.be.equal("0");
-    (await govTokens[1].balanceOf(user4)).toString().should.be.equal("0");
-    (await govTokens[2].balanceOf(user4)).toString().should.be.equal("0");
+    const feeTreasury = "0x69a62C24F16d4914a48919613e8eE330641Bcb94";
 
-    // user4 cannot withdraw gov tokens
-    try {
-      await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: user4 });
-      throw("withdrawGovToken from user4 should have failed");
-    } catch(err) {
-      err.toString().should.match(/caller is not the govOwner/);
-    }
+    // feeTreasury has 0 of each gov token
+    (await govTokens[0].balanceOf(feeTreasury)).toString().should.be.equal("0");
+    (await govTokens[1].balanceOf(feeTreasury)).toString().should.be.equal("0");
+    (await govTokens[2].balanceOf(feeTreasury)).toString().should.be.equal("0");
 
-    // owner send gov tokens to user4
-    await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: owner });
-    (await govTokens[0].balanceOf(user4)).toString().should.be.equal("10");
+    // anyone can call withdrawGovToken and send them to feeTreasury
+    await this.batchedMint.withdrawGovToken({ from: user4 });
 
-
-    // user4 cannot change govOwner
-    try {
-      await this.batchedMint.setGovOwner(user4, { from: user4 });
-      throw("setGovOwner from user4 should have failed");
-    } catch(err) {
-      err.toString().should.match(/Ownable: caller is not the owner/);
-    }
-
-    // owner can setGovOwner
-    await this.batchedMint.setGovOwner(govOwner, { from: owner });
-
-    // owner cannot withdraw gov tokens anymore
-    try {
-      await this.batchedMint.withdrawGovToken(govTokens[0].address, user4, { from: owner });
-      throw("withdrawGovToken from owner should have failed");
-    } catch(err) {
-      err.toString().should.match(/caller is not the govOwner/);
-    }
-
-    // govOwner sent other gov tokens to user4
-
-    await this.batchedMint.withdrawGovToken(govTokens[1].address, user4, { from: govOwner });
-    (await govTokens[1].balanceOf(user4)).toString().should.be.equal("20");
-
-    await this.batchedMint.withdrawGovToken(govTokens[2].address, user4, { from: govOwner });
-    (await govTokens[2].balanceOf(user4)).toString().should.be.equal("30");
-
-    // cannot withdraw tokens that are not gov tokens
-    try {
-      await this.batchedMint.withdrawGovToken(this.DAIMock.address, user4, { from: govOwner });
-      throw("withdrawGovToken with bad token should have failed");
-    } catch(err) {
-      err.toString().should.match(/govToken not found/);
-    }
-
+    // feeTreasury received gov tokens
+    (await govTokens[0].balanceOf(feeTreasury)).toString().should.be.equal("10");
+    (await govTokens[1].balanceOf(feeTreasury)).toString().should.be.equal("20");
+    (await govTokens[2].balanceOf(feeTreasury)).toString().should.be.equal("30");
   });
 });

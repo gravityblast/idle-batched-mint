@@ -28,8 +28,6 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
   address constant feeTreasury = 0x69a62C24F16d4914a48919613e8eE330641Bcb94;
   address constant ecosystemFund = 0xb0aA1f98523Ec15932dd5fAAC5d86e57115571C7;
 
-  address public govOwner;
-
   // batchDeposits[user][batchId] = amount
   mapping (address => mapping (uint256 => uint256)) public batchDeposits;
   mapping (uint256 => uint256) public batchTotals;
@@ -41,7 +39,6 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
   function initialize(address _idleToken) public initializer {
     OwnableUpgradeable.__Ownable_init();
     PausableUpgradeable.__Pausable_init();
-    govOwner = msg.sender;
     idleToken = _idleToken;
     underlying = IIdleTokenV3_1(idleToken).token();
     IERC20(underlying).safeApprove(idleToken, uint256(-1));
@@ -81,26 +78,13 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
     currBatch = currBatch.add(1);
   }
 
-  function setGovOwner(address newGovOwner) external onlyOwner {
-    govOwner = newGovOwner;
-  }
-
-  function withdrawGovToken(address _token, address _to) external {
-    require(msg.sender == govOwner, "caller is not the govOwner");
-
+  function withdrawGovToken() external whenNotPaused {
     uint256[] memory amounts = IIdleTokenV3_1(idleToken).getGovTokensAmounts(0x0000000000000000000000000000000000000000);
 
-    bool found;
     for (uint256 i; i < amounts.length; i++) {
-      if (IIdleTokenV3_1(idleToken).govTokens(i) == _token) {
-        found = true;
-        break;
-      }
+      address token = IIdleTokenV3_1(idleToken).govTokens(i);
+      IERC20(token).safeTransfer(feeTreasury, IERC20(token).balanceOf(address(this)));
     }
-
-    require(found, "govToken not found");
-
-    IERC20(_token).safeTransfer(_to, IERC20(_token).balanceOf(address(this)));
   }
 
   function emergencyWithdrawToken(address _token, address _to) external onlyOwner {

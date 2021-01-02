@@ -81,7 +81,7 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
   function withdrawGovToken() external whenNotPaused {
     uint256[] memory amounts = IIdleTokenV3_1(idleToken).getGovTokensAmounts(0x0000000000000000000000000000000000000000);
 
-    for (uint256 i; i < amounts.length; i++) {
+    for (uint256 i = 0; i < amounts.length; i++) {
       address token = IIdleTokenV3_1(idleToken).govTokens(i);
       IERC20(token).safeTransfer(feeTreasury, IERC20(token).balanceOf(address(this)));
     }

@@ -155,4 +155,39 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     (await govTokens[1].balanceOf(feeTreasury)).toString().should.be.equal("20");
     (await govTokens[2].balanceOf(feeTreasury)).toString().should.be.equal("30");
   });
+
+  it("should fails if paused", async () => {
+    const calls = {
+      deposit: [0],
+      withdraw: [0],
+      executeBatch: [0],
+      withdrawGovToken: [],
+    }
+
+    // deposit and execute batch to be sure batch 0 is available for withdraw
+    await this.DAIMock.approve(this.batchedMint.address, 1, { from: owner });
+    await this.batchedMint.deposit(1, { from: owner });
+    await this.batchedMint.executeBatch(true);
+
+    // all methods should work
+    for (let method in calls) {
+      const params = calls[method];
+      await this.batchedMint[method](...params, { from: owner });
+    }
+
+    // pause
+    await this.batchedMint.pause({ from: owner });
+    (await this.batchedMint.paused()).should.be.equal(true);
+
+    // all pausable methods should fail
+    for (let method in calls) {
+      try {
+        const params = calls[method];
+        await this.batchedMint[method](...params, { from: owner });
+        throw("call should have failed");
+      } catch (err) {
+        err.should.match(/Pausable: paused/);
+      }
+    }
+  });
 });

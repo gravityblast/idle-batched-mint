@@ -93,4 +93,8 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
     }
     IERC20(_token).safeTransfer(_to, IERC20(_token).balanceOf(address(this)));
   }
+
+  function pause() external {
+    _pause();
+  }
 }

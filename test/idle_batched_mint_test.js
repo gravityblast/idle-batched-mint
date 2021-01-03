@@ -108,13 +108,16 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     await checkUserDeposit(user2, 0, "5");
     await checkUserDeposit(user2, 1, "30");
 
+    // user3 deposits to batch 1
+    await permitAndDeposit(user3, 100);
+
     // execute batch 1
     await this.batchedMint.executeBatch(true);
 
     // user2 has 0 idle tokens
     await checkBalance(user2, this.token, "0");
-    // contract has 41 idle tokens
-    await checkBalance(this.batchedMint.address, this.token, "41");
+    // contract has 141 idle tokens
+    await checkBalance(this.batchedMint.address, this.token, "141");
 
     // user2 withdraws batch 1
     await withdraw(user2, 1, "30");
@@ -124,8 +127,25 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     await checkUserDeposit(user2, 1, "0");
     // user2 has 30 idle tokens
     await checkBalance(user2, this.token, "30");
-    // contract has 11 idle tokens
-    await checkBalance(this.batchedMint.address, this.token, "11");
+    // contract has 111 idle tokens
+    await checkBalance(this.batchedMint.address, this.token, "111");
+
+    // user1 cannot withdraw again from batch 0
+    await withdraw(user1, 0, "0");
+
+    // user1 cannot withdraw from batch 1 without depositing
+    await withdraw(user1, 1, "0");
+
+    // execute empty batch 2
+    await this.batchedMint.executeBatch(true);
+
+    // withdrawing from empty batch throws an error
+    try {
+      await withdraw(user1, 2, "0");
+      throw("withdraw should have failed");
+    } catch (err) {
+      err.should.match(/empty batch/);
+    }
   });
 
   it("withdraws govTokens", async () => {

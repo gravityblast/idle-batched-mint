@@ -20,6 +20,11 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     this.batchedMint = await IdleBatchedMint.at(instance.address);
   });
 
+  it("initializes the contract", async () => {
+    (await this.batchedMint.idleToken()).should.be.equal(this.token.address);
+    (await this.batchedMint.underlying()).should.be.equal(this.DAIMock.address);
+  });
+
   it("creates batches", async () => {
     const deposit = async (user, amount) => {
       // transfer amount from owner to user

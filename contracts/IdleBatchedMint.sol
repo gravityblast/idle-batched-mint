@@ -58,6 +58,8 @@ contract IdleBatchedMint is Initializable, OwnableUpgradeable, PausableUpgradeab
 
   function withdraw(uint256 batchId) external whenNotPaused {
     require(currBatch != 0 && batchId < currBatch, 'Batch id invalid');
+    require(batchTotals[batchId] > 0, "empty batch");
+
     uint256 deposited = batchDeposits[msg.sender][batchId];
     uint256 batchBal = batchRedeemedTotals[batchId];
     uint256 share = deposited.mul(batchBal).div(batchTotals[batchId]);

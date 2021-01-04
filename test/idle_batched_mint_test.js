@@ -25,6 +25,12 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
     (await this.batchedMint.underlying()).should.be.equal(this.DAIMock.address);
   });
 
+  it("upgrades proxy", async () => {
+    const signers = await ethers.getSigners();
+    const contract = (await ethers.getContractFactory("IdleBatchedMint")).connect(signers[1]);
+    const newInstance = await upgrades.upgradeProxy(this.batchedMint.address, contract, [this.token.address]);
+  });
+
   it("creates batches", async () => {
     const deposit = async (user, amount) => {
       // transfer amount from owner to user

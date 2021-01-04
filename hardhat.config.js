@@ -38,7 +38,8 @@ module.exports = {
   networks: {
     hardhat: {},
     local: {
-      url: "http://127.0.0.1:8545/"
+      url: "http://127.0.0.1:8545/",
+      timeout: 120000,
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.IDLE_INFURA_KEY}`,

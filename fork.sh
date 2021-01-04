@@ -7,6 +7,7 @@ if [ -z "$1" ]; then
   echo
   echo "for kovan:";
   echo "./fork mainnet";
+  exit 1;
 fi
 
 npx hardhat node \

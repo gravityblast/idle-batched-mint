@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * @title: Idle Token interface
  * @author: Idle Labs Inc., idle.finance
  */
 pragma solidity ^0.6.0;
 
-interface IIdleTokenV3_1 {
+import "./IERC20Permit.sol";
+
+interface IIdleTokenV3_1 is IERC20Permit {
   function tokenPrice() external view returns (uint256 price);
   function token() external view returns (address);
   function getAPRs() external view returns (address[] memory addresses, uint256[] memory aprs);

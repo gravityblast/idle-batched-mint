@@ -1,8 +1,10 @@
 const hre = require("hardhat");
 const { signPermit, IdleTokens} = require("../lib");
 const { ethers, upgrades } = require("hardhat");
+const BN = require("bignumber.js");
 const IERC20 = artifacts.require('IERC20Permit');
 const IdleTokenMock = artifacts.require('IdleTokenMock');
+const IIdleTokenV3_1 = artifacts.require('IIdleTokenV3_1');
 const IdleBatchedMint = artifacts.require('IdleBatchedMint');
 
 const idleDAIRisk  = "0xa14eA0E11121e6E951E87c66AFe460A00BCD6A16";
@@ -13,22 +15,74 @@ const idleUSDTRisk = "0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5";
 const CHAIN_ID = 1;
 const network = "mainnet";
 const HOLDER = process.env.HOLDER;
-const idleTokenAddress = IdleTokens[network].idleDAIBest;
 
-const main = async () => {
+const scenarios = [
+  {
+    usePermit: false,
+    decimals: 18,
+    idleTokenAddress: IdleTokens[network].idleDAIBest,
+  },
+  {
+    usePermit: false,
+    decimals: 6,
+    idleTokenAddress: IdleTokens[network].idleUSDCBest,
+  },
+  {
+    usePermit: false,
+    decimals: 6,
+    idleTokenAddress: IdleTokens[network].idleUSDTBest,
+  },
+  {
+    usePermit: false,
+    decimals: 18,
+    idleTokenAddress: IdleTokens[network].idleSUSDBest,
+  },
+  {
+    usePermit: false,
+    decimals: 18,
+    idleTokenAddress: IdleTokens[network].idleTUSDBest,
+  },
+  {
+    usePermit: false,
+    decimals: 18,
+    idleTokenAddress: IdleTokens[network].idleWBTCBest,
+  },
+];
+
+const check = (a, b, message) => {
+  let icon = "✔️";
+  if (a !== b) {
+    icon = "🚨🚨🚨";
+  }
+
+  console.log(`${icon}  `, a, "!==", b, message ? message : "");
+}
+
+const toBN = (v) => new BN(v.toString());
+
+const start = async ({ usePermit, decimals, idleTokenAddress }) => {
   if (HOLDER === "" || HOLDER === undefined) {
     console.log("The HOLDER env var must be exported and be a valid address with enough underlying tokens.")
     process.exit(1);
   }
 
+  const ONE_UNDERLYING_UNIT = toBN(10 ** decimals);
+  const ONE_IDLE_UNIT = toBN(10 ** 18);
+
   const underlyingAddress = await (await IdleTokenMock.at(idleTokenAddress)).token();
   const UnderlyingToken = await IERC20.at(underlyingAddress);
-  const IdleToken = await IERC20.at(idleTokenAddress);
+  const IdleToken = await IIdleTokenV3_1.at(idleTokenAddress);
+
+  const toUnderlyingUnit = (v) => toBN(v).div(ONE_UNDERLYING_UNIT);
+  const fromUnderlyingUnit = (v) => toBN(v).times(ONE_UNDERLYING_UNIT);
+  const toIdleUnit = (v) => toBN(v).div(ONE_IDLE_UNIT);
+  const fromIdleUnit = (v) => toBN(v).times(ONE_IDLE_UNIT);
 
   console.log("using holder", HOLDER);
-  console.log("using idle token", (await IdleToken.name()), "-", idleTokenAddress);
+  console.log("holder balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(HOLDER)).toString());
+  console.log("using idle token 🪙 " , (await IdleToken.name()), "-", idleTokenAddress);
   console.log("using underlying token", (await UnderlyingToken.name()), "-", underlyingAddress);
-
+  console.log("underlying token decimals", decimals);
 
   // deploy
   const factory = await ethers.getContractFactory("IdleBatchedMint");
@@ -44,10 +98,12 @@ const main = async () => {
     params: [HOLDER]}
   );
 
-  const deposit = async (accountIndex, amount, permit) => {
-    console.log("*********************************************************************");
+  const deposit = async (accountIndex, amountInUnit, permit) => {
+    const amount = fromUnderlyingUnit(amountInUnit).toString();
+
+    console.log("⬇️  deposit");
     const account = accounts[accountIndex];
-    console.log(`deposit of ${amount} from ${accountIndex} (${account})`)
+    console.log(`deposit of ${amountInUnit} (${(amount)}) from ${accountIndex} (${account})`)
 
     await UnderlyingToken.transfer(account, amount, { from: HOLDER });
 
@@ -73,21 +129,46 @@ const main = async () => {
     const currBatch = await idleBatchedMint.currBatch();
 
     console.log(`account ${accountIndex} deposit`, (await idleBatchedMint.batchDeposits(account, currBatch)).toString());
-    console.log("contract underlying balance", (await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());
-    console.log("contract idle token balance", (await IdleToken.balanceOf(idleBatchedMint.address)).toString());
-    console.log("*********************************************************************");
+    console.log("contract underlying balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());
+    console.log("contract idle token balance", toIdleUnit(await IdleToken.balanceOf(idleBatchedMint.address)).toString());
   }
 
   await deposit(0, 10);
   await deposit(1, 30);
-  await deposit(2, 50, true);
-  await deposit(2, 100, true);
+  await deposit(2, 50, usePermit);
+  await deposit(2, 100, usePermit);
 
-  console.log("calling executeBatch")
+  console.log("⬆️  calling executeBatch")
+
   await idleBatchedMint.executeBatch(true, { from: HOLDER });
+
   console.log("executeBatch done")
-  console.log("contract underlying balance", (await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());
-  console.log("contract idle token balance", (await IdleToken.balanceOf(idleBatchedMint.address)).toString());
+
+  console.log("contract underlying balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());
+  console.log("contract idle token balance", toIdleUnit(await IdleToken.balanceOf(idleBatchedMint.address)).toString());
+
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[0])).toString(), "0", "idle token balance before withdraw should be 0");
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[1])).toString(), "0", "idle token balance before withdraw should be 0");
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[2])).toString(), "0", "idle token balance before withdraw should be 0");
+
+  await idleBatchedMint.withdraw(0, { from: accounts[0] });
+  await idleBatchedMint.withdraw(0, { from: accounts[1] });
+  await idleBatchedMint.withdraw(0, { from: accounts[2] });
+
+  const idleTokenPrice = toBN(await IdleToken.tokenPrice()).div(ONE_UNDERLYING_UNIT);
+  console.log("idle token price", idleTokenPrice.toString())
+
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[0])).toString(), toBN("10").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[1])).toString(), toBN("30").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[2])).toString(), toBN("150").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
+}
+
+const main = async () => {
+  for (var i = 0; i < scenarios.length; i++) {
+    const s = scenarios[i];
+    console.log("➡️  STARTING NEW SCENARIO ⬅️");
+    await start(s);
+  };
 }
 
 main()

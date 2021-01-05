@@ -21,6 +21,7 @@ const holders = {
 }
 
 const scenarios = [
+  // best
   {
     usePermit: true,
     signPermitFunc: signPermit,
@@ -58,6 +59,27 @@ const scenarios = [
     decimals: 8,
     idleTokenAddress: IdleTokens[network].idleWBTCBest,
     holder: holders.wbtc,
+  },
+  // risk
+  {
+    usePermit: true,
+    signPermitFunc: signPermit,
+    decimals: 18,
+    idleTokenAddress: IdleTokens[network].idleDAIRisk,
+    holder: holders.bittrex,
+  },
+  {
+    usePermit: true,
+    signPermitFunc: signPermitEIP2612,
+    decimals: 6,
+    idleTokenAddress: IdleTokens[network].idleUSDCRisk,
+    holder: holders.bittrex,
+  },
+  {
+    usePermit: false,
+    decimals: 6,
+    idleTokenAddress: IdleTokens[network].idleUSDTRisk,
+    holder: holders.bittrex,
   },
 ];
 

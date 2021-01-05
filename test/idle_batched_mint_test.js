@@ -45,7 +45,7 @@ contract('IdleBatchedMint', function ([_, owner, govOwner, manager, user1, user2
       const nonce = 0;
       const expiry = Math.round(new Date().getTime() / 1000 + 3600);
       const erc20Name = await this.DAIMock.name();
-      const sig =  await signPermit(this.DAIMock.address, erc20Name, user, this.batchedMint.address, nonce, expiry);
+      const sig =  await signPermit(this.DAIMock.address, erc20Name, user, this.batchedMint.address, amount, nonce, expiry);
       const r = sig.slice(0, 66);
       const s = "0x" + sig.slice(66, 130);
       const v = "0x" + sig.slice(130, 132);

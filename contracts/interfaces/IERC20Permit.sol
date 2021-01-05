@@ -3,9 +3,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC20Detailed is IERC20 {
   function name() external view returns(string memory);
+  function decimals() external view returns(uint256);
 }
 
-interface IERC20Nonces is IERC20, IERC20Detailed {
+interface IERC20Nonces is IERC20Detailed {
   function nonces(address holder) external view returns(uint);
 }
 

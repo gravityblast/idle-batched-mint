@@ -25,38 +25,32 @@ const scenarios = [
   {
     usePermit: true,
     signPermitFunc: signPermit,
-    decimals: 18,
     idleTokenAddress: IdleTokens[network].idleDAIBest,
     holder: holders.bittrex,
   },
   {
     usePermit: true,
     signPermitFunc: signPermitEIP2612,
-    decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDCBest,
     holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDTBest,
     holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 18,
     idleTokenAddress: IdleTokens[network].idleSUSDBest,
     holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 18,
     idleTokenAddress: IdleTokens[network].idleTUSDBest,
     holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 8,
     idleTokenAddress: IdleTokens[network].idleWBTCBest,
     holder: holders.wbtc,
   },
@@ -64,20 +58,17 @@ const scenarios = [
   {
     usePermit: true,
     signPermitFunc: signPermit,
-    decimals: 18,
     idleTokenAddress: IdleTokens[network].idleDAIRisk,
     holder: holders.bittrex,
   },
   {
     usePermit: true,
     signPermitFunc: signPermitEIP2612,
-    decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDCRisk,
     holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDTRisk,
     holder: holders.bittrex,
   },
@@ -90,13 +81,14 @@ const check = (a, b, message) => {
 
 const toBN = (v) => new BN(v.toString());
 
-const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress, holder}) => {
-  const ONE_UNDERLYING_UNIT = toBN(10 ** decimals);
-  const ONE_IDLE_UNIT = toBN(10 ** 18);
-
+const start = async ({ usePermit, signPermitFunc, idleTokenAddress, holder}) => {
   const underlyingAddress = await (await IdleTokenMock.at(idleTokenAddress)).token();
   const UnderlyingToken = await IERC20.at(underlyingAddress);
+  const decimals = toBN(await UnderlyingToken.decimals()).toNumber();
   const IdleToken = await IIdleTokenV3_1.at(idleTokenAddress);
+
+  const ONE_UNDERLYING_UNIT = toBN(10 ** decimals);
+  const ONE_IDLE_UNIT = toBN(10 ** 18);
 
   const toUnderlyingUnit = (v) => toBN(v).div(ONE_UNDERLYING_UNIT);
   const fromUnderlyingUnit = (v) => toBN(v).times(ONE_UNDERLYING_UNIT);
@@ -107,7 +99,7 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress, ho
   console.log("using idle token 🪙 " , (await IdleToken.name()), "-", idleTokenAddress);
   console.log("using underlying token", (await UnderlyingToken.name()), "-", underlyingAddress);
   console.log("holder balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(holder)).toString());
-  console.log("underlying token decimals", decimals);
+  console.log(`underlying token decimals ${decimals}`);
 
   // deploy
   const factory = await ethers.getContractFactory("IdleBatchedMint");
@@ -147,7 +139,7 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress, ho
         await idleBatchedMint.permitAndDeposit(amount, nonce, expiry, v, r, s, { from: account });
       } else {
         console.log("calling permitEIP2612AndDeposit");
-        await idleBatchedMint.permitEIP2612AndDeposit(amount, nonce, expiry, v, r, s, { from: account });
+        await idleBatchedMint.permitEIP2612AndDeposit(amount, expiry, v, r, s, { from: account });
       }
     } else {
       console.log("calling approve");

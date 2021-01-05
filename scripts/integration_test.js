@@ -14,7 +14,11 @@ const idleUSDTRisk = "0x28fAc5334C9f7262b3A3Fe707e250E01053e07b5";
 // config
 const CHAIN_ID = 1;
 const network = "mainnet";
-const HOLDER = process.env.HOLDER;
+
+const holders = {
+  bittrex: "0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98",
+  wbtc: "0xd1669ac6044269b59fa12c5822439f609ca54f41",
+}
 
 const scenarios = [
   {
@@ -22,32 +26,38 @@ const scenarios = [
     signPermitFunc: signPermit,
     decimals: 18,
     idleTokenAddress: IdleTokens[network].idleDAIBest,
+    holder: holders.bittrex,
   },
   {
     usePermit: true,
     signPermitFunc: signPermitEIP2612,
     decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDCBest,
+    holder: holders.bittrex,
   },
   {
     usePermit: false,
     decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDTBest,
+    holder: holders.bittrex,
   },
   {
     usePermit: false,
     decimals: 18,
     idleTokenAddress: IdleTokens[network].idleSUSDBest,
+    holder: holders.bittrex,
   },
   {
     usePermit: false,
     decimals: 18,
     idleTokenAddress: IdleTokens[network].idleTUSDBest,
+    holder: holders.bittrex,
   },
   {
     usePermit: false,
-    decimals: 18,
+    decimals: 8,
     idleTokenAddress: IdleTokens[network].idleWBTCBest,
+    holder: holders.wbtc,
   },
 ];
 
@@ -62,12 +72,7 @@ const check = (a, b, message) => {
 
 const toBN = (v) => new BN(v.toString());
 
-const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) => {
-  if (HOLDER === "" || HOLDER === undefined) {
-    console.log("The HOLDER env var must be exported and be a valid address with enough underlying tokens.")
-    process.exit(1);
-  }
-
+const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress, holder}) => {
   const ONE_UNDERLYING_UNIT = toBN(10 ** decimals);
   const ONE_IDLE_UNIT = toBN(10 ** 18);
 
@@ -80,10 +85,10 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) 
   const toIdleUnit = (v) => toBN(v).div(ONE_IDLE_UNIT);
   const fromIdleUnit = (v) => toBN(v).times(ONE_IDLE_UNIT);
 
-  console.log("using holder", HOLDER);
-  console.log("holder balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(HOLDER)).toString());
+  console.log("using holder", holder);
   console.log("using idle token 🪙 " , (await IdleToken.name()), "-", idleTokenAddress);
   console.log("using underlying token", (await UnderlyingToken.name()), "-", underlyingAddress);
+  console.log("holder balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(holder)).toString());
   console.log("underlying token decimals", decimals);
 
   // deploy
@@ -97,7 +102,7 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) 
   const accounts = await web3.eth.getAccounts();
   await hre.network.provider.request({
     method: "hardhat_impersonateAccount",
-    params: [HOLDER]}
+    params: [holder]}
   );
 
   const deposit = async (accountIndex, amountInUnit, permit) => {
@@ -107,7 +112,7 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) 
     const account = accounts[accountIndex];
     console.log(`deposit of ${amountInUnit} (${(amount)}) from ${accountIndex} (${account})`)
 
-    await UnderlyingToken.transfer(account, amount, { from: HOLDER });
+    await UnderlyingToken.transfer(account, amount, { from: holder });
 
     if (permit) {
       const nonce = await UnderlyingToken.nonces(account);
@@ -146,7 +151,7 @@ const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) 
   await deposit(2, 100, usePermit);
 
   console.log("⬆️  calling executeBatch")
-  await idleBatchedMint.executeBatch(true, { from: HOLDER });
+  await idleBatchedMint.executeBatch(true, { from: holder });
   console.log("executeBatch done")
 
   console.log("contract underlying balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());

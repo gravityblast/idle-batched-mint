@@ -35,7 +35,6 @@ export IDLE_INFURA_KEY=YOUR_INFURA_KEY
 Run the integration test:
 
 ```
-export HOLDER=0x.... # address of an account with DAI funds
 npx hardhat run scripts/integration_test.js --network local
 ```
 

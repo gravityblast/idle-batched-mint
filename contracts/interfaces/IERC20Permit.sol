@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.6.12;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC20Detailed is IERC20 {

@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-truffle5");
 require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-gas-reporter");
 require('chai').should();
 
 
@@ -33,7 +34,13 @@ module.exports = {
       {
         version: "0.7.6",
       }
-    ]
+    ],
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 10000
+      }
+    }
   },
   networks: {
     hardhat: {},

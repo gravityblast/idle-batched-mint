@@ -134,11 +134,11 @@ const start = async ({ usePermit, signPermitFunc, idleTokenAddress, holder}) => 
       const s = "0x" + sig.slice(66, 130);
       const v = "0x" + sig.slice(130, 132);
 
-      if (signPermitFunc === signPermit) {
+      if (signPermitFunc === signPermit) { // DAI
         console.log("calling permitAndDeposit");
         await idleBatchedMint.permitAndDeposit(amount, nonce, expiry, v, r, s, { from: account });
       } else {
-        console.log("calling permitEIP2612AndDeposit");
+        console.log("calling permitEIP2612AndDeposit"); // USDC
         await idleBatchedMint.permitEIP2612AndDeposit(amount, expiry, v, r, s, { from: account });
       }
     } else {
@@ -160,13 +160,16 @@ const start = async ({ usePermit, signPermitFunc, idleTokenAddress, holder}) => 
   await deposit(2, 50, usePermit);
   await deposit(2, 100, usePermit);
 
+  const underlyingTokenBalanceBefore = toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address));
   console.log("⬆️  calling executeBatch")
   await idleBatchedMint.executeBatch(true, { from: holder });
   console.log("executeBatch done")
 
+  const idleTokenBalanceAfter = toIdleUnit(await IdleToken.balanceOf(idleBatchedMint.address));
+  const priceExecute = underlyingTokenBalanceBefore.div(idleTokenBalanceAfter);
   console.log("contract underlying balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());
-  console.log("contract idle token balance", toIdleUnit(await IdleToken.balanceOf(idleBatchedMint.address)).toString());
-
+  console.log("contract idle token balance", idleTokenBalanceAfter.toString());
+  console.log("price used at execute batch", underlyingTokenBalanceBefore.div(idleTokenBalanceAfter).toString())
   check(toIdleUnit(await IdleToken.balanceOf(accounts[0])).toString(), "0", "idle token balance before withdraw should be 0");
   check(toIdleUnit(await IdleToken.balanceOf(accounts[1])).toString(), "0", "idle token balance before withdraw should be 0");
   check(toIdleUnit(await IdleToken.balanceOf(accounts[2])).toString(), "0", "idle token balance before withdraw should be 0");
@@ -175,12 +178,9 @@ const start = async ({ usePermit, signPermitFunc, idleTokenAddress, holder}) => 
   await idleBatchedMint.withdraw(0, { from: accounts[1] });
   await idleBatchedMint.withdraw(0, { from: accounts[2] });
 
-  const idleTokenPrice = toBN(await IdleToken.tokenPrice()).div(ONE_UNDERLYING_UNIT);
-  console.log("idle token price", idleTokenPrice.toString())
-
-  check(toIdleUnit(await IdleToken.balanceOf(accounts[0])).toString(), toBN("10").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
-  check(toIdleUnit(await IdleToken.balanceOf(accounts[1])).toString(), toBN("30").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
-  check(toIdleUnit(await IdleToken.balanceOf(accounts[2])).toString(), toBN("150").times(ONE_IDLE_UNIT).div(idleTokenPrice).div(ONE_IDLE_UNIT).toString());
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[0])).toString(), toBN("10").times(ONE_IDLE_UNIT).div(priceExecute).div(ONE_IDLE_UNIT).toString());
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[1])).toString(), toBN("30").times(ONE_IDLE_UNIT).div(priceExecute).div(ONE_IDLE_UNIT).toString());
+  check(toIdleUnit(await IdleToken.balanceOf(accounts[2])).toString(), toBN("150").times(ONE_IDLE_UNIT).div(priceExecute).div(ONE_IDLE_UNIT).toString());
 }
 
 const main = async () => {
@@ -197,4 +197,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-

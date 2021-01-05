@@ -1,8 +1,8 @@
 const hre = require("hardhat");
-const { signPermit, IdleTokens} = require("../lib");
+const { signPermit, signPermitEIP2612, IdleTokens} = require("../lib");
 const { ethers, upgrades } = require("hardhat");
 const BN = require("bignumber.js");
-const IERC20 = artifacts.require('IERC20Permit');
+const IERC20 = artifacts.require('IERC20Nonces');
 const IdleTokenMock = artifacts.require('IdleTokenMock');
 const IIdleTokenV3_1 = artifacts.require('IIdleTokenV3_1');
 const IdleBatchedMint = artifacts.require('IdleBatchedMint');
@@ -18,12 +18,14 @@ const HOLDER = process.env.HOLDER;
 
 const scenarios = [
   {
-    usePermit: false,
+    usePermit: true,
+    signPermitFunc: signPermit,
     decimals: 18,
     idleTokenAddress: IdleTokens[network].idleDAIBest,
   },
   {
-    usePermit: false,
+    usePermit: true,
+    signPermitFunc: signPermitEIP2612,
     decimals: 6,
     idleTokenAddress: IdleTokens[network].idleUSDCBest,
   },
@@ -60,7 +62,7 @@ const check = (a, b, message) => {
 
 const toBN = (v) => new BN(v.toString());
 
-const start = async ({ usePermit, decimals, idleTokenAddress }) => {
+const start = async ({ usePermit, signPermitFunc, decimals, idleTokenAddress }) => {
   if (HOLDER === "" || HOLDER === undefined) {
     console.log("The HOLDER env var must be exported and be a valid address with enough underlying tokens.")
     process.exit(1);
@@ -112,13 +114,18 @@ const start = async ({ usePermit, decimals, idleTokenAddress }) => {
       console.log("nonce:", nonce.toString())
       const expiry = Math.round(new Date().getTime() / 1000 + 3600);
       const erc20Name = await UnderlyingToken.name();
-      const sig =  await signPermit(UnderlyingToken.address, erc20Name, account, idleBatchedMint.address, nonce, expiry, CHAIN_ID);
+      const sig =  await signPermitFunc(UnderlyingToken.address, erc20Name, account, idleBatchedMint.address, amount, nonce, expiry, CHAIN_ID);
       const r = sig.slice(0, 66);
       const s = "0x" + sig.slice(66, 130);
       const v = "0x" + sig.slice(130, 132);
 
-      console.log("calling permitAndDeposit");
-      await idleBatchedMint.permitAndDeposit(amount, nonce, expiry, v, r, s, { from: account });
+      if (signPermitFunc === signPermit) {
+        console.log("calling permitAndDeposit");
+        await idleBatchedMint.permitAndDeposit(amount, nonce, expiry, v, r, s, { from: account });
+      } else {
+        console.log("calling permitEIP2612AndDeposit");
+        await idleBatchedMint.permitEIP2612AndDeposit(amount, nonce, expiry, v, r, s, { from: account });
+      }
     } else {
       console.log("calling approve");
       await UnderlyingToken.approve(idleBatchedMint.address, amount, { from: account });
@@ -139,9 +146,7 @@ const start = async ({ usePermit, decimals, idleTokenAddress }) => {
   await deposit(2, 100, usePermit);
 
   console.log("⬆️  calling executeBatch")
-
   await idleBatchedMint.executeBatch(true, { from: HOLDER });
-
   console.log("executeBatch done")
 
   console.log("contract underlying balance", toUnderlyingUnit(await UnderlyingToken.balanceOf(idleBatchedMint.address)).toString());

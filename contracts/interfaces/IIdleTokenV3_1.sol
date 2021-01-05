@@ -7,7 +7,7 @@ pragma solidity ^0.6.0;
 
 import "./IERC20Permit.sol";
 
-interface IIdleTokenV3_1 is IERC20Permit {
+interface IIdleTokenV3_1 is IERC20Detailed {
   function tokenPrice() external view returns (uint256 price);
   function token() external view returns (address);
   function getAPRs() external view returns (address[] memory addresses, uint256[] memory aprs);

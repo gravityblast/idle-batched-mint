@@ -21,9 +21,9 @@ const prompt = (question) => {
 async function main() {
   const [deployer] = await ethers.getSigners();
   const network = hre.network.name;
-  console.log("runing on network ", hre.network.name)
-  console.log(`deploying with account ${deployer.address}`);
-  console.log("account balance:", (await deployer.getBalance()).toString(), "\n\n");
+  console.log("runing on network", hre.network.name)
+  console.log("deploying with account", deployer.address);
+  console.log("account balance", (await deployer.getBalance()).toString(), "\n\n");
 
   const answer = await prompt("continue? [y/n]");
   if (answer !== "y" && answer !== "yes") {
@@ -38,7 +38,6 @@ async function main() {
     console.log(`deploying IdleBatchedMint for ${token} (${tokenAddress})`);
     const IdleBatchedMint = await ethers.getContractFactory("IdleBatchedMint");
     const args = [tokenAddress];
-    console.log(`module.exports = ${JSON.stringify(args)}`);
     const proxy = await upgrades.deployProxy(IdleBatchedMint, args);
     await proxy.deployed();
     console.log(`${token} proxy deployed at`, proxy.address)

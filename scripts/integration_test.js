@@ -84,12 +84,8 @@ const scenarios = [
 ];
 
 const check = (a, b, message) => {
-  let icon = "✔️";
-  if (a !== b) {
-    icon = "🚨🚨🚨";
-  }
-
-  console.log(`${icon}  `, a, "!==", b, message ? message : "");
+  let [icon, symbol] = a === b ? ["✔️", "==="] : ["🚨🚨🚨", "!=="];
+  console.log(`${icon}  `, a, symbol, b, message ? message : "");
 }
 
 const toBN = (v) => new BN(v.toString());
